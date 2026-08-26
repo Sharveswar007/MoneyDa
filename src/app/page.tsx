@@ -575,6 +575,16 @@ export default function Dashboard() {
               </p>
             </div>
           </div>
+          <button 
+             onClick={() => {
+                setAnalysisResult(null);
+                setFile(null);
+                setChatHistory([{ role: 'ai', content: "Hello! I am your AI financial copilot. Ask me anything about your spending." }]);
+             }}
+             className="px-4 py-2 bg-white dark:bg-black border border-slate-200 dark:border-[#333] hover:bg-slate-50 dark:hover:bg-[#111] text-slate-700 dark:text-white font-bold rounded-lg text-sm transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap"
+          >
+             <UploadCloud size={16} /> New Scan
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
