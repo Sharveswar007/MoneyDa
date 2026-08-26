@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [scanResult, setScanResult] = useState<any>(null);
 
   const [userName, setUserName] = useState("MoneyDa Hacker");
+  const [isEditingName, setIsEditingName] = useState(false);
   const [preferredCurrency, setPreferredCurrency] = useState('INR');
   const currencySymbol = preferredCurrency === 'INR' ? '₹' : preferredCurrency === 'USD' ? '$' : preferredCurrency === 'EUR' ? '€' : '£';
   
@@ -117,7 +118,8 @@ export default function Dashboard() {
            filename: file.name,
            date: new Date().toISOString(),
            transactions: data.categorized.length,
-           runway: data.predictions?.broke_date || 'Unknown'
+           runway: data.predictions?.broke_date || 'Unknown',
+           raw: data
         };
         const updatedHistory = [newEntry, ...history];
         setHistory(updatedHistory);
@@ -134,6 +136,16 @@ export default function Dashboard() {
     localStorage.removeItem('moneyda_cache');
     setAnalysisResult(null);
     setCurrentView('home');
+  };
+
+  const handleLoadHistory = (h: any) => {
+    if (h.raw) {
+      setAnalysisResult(h.raw);
+      localStorage.setItem('moneyda_cache', JSON.stringify(h.raw));
+      setCurrentView('transactions');
+    } else {
+      alert("This is a legacy history entry. Please upload the CSV file again.");
+    }
   };
 
   const formatAmount = (amount: number) => {
@@ -780,9 +792,24 @@ export default function Dashboard() {
           </div>
           <input type="file" className="hidden" accept="image/*" onChange={handleProfileImageUpload} />
         </label>
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">{userName}</h2>
         
-        <div className="mt-4 flex items-center gap-4">
+        {isEditingName ? (
+           <input 
+              type="text" 
+              value={userName} 
+              onChange={e => setUserName(e.target.value)}
+              onBlur={() => { setIsEditingName(false); localStorage.setItem('moneyda_username', userName); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { setIsEditingName(false); localStorage.setItem('moneyda_username', userName); } }}
+              autoFocus
+              className="text-2xl font-bold text-center bg-transparent border-b-2 border-orange-500 focus:outline-none dark:text-white"
+           />
+        ) : (
+           <h2 onClick={() => setIsEditingName(true)} className="text-2xl font-bold text-slate-800 dark:text-white cursor-pointer hover:text-orange-500 transition-colors" title="Click to edit">
+             {userName}
+           </h2>
+        )}
+        
+        <div className="mt-4 flex items-center justify-center gap-4">
            <label className="text-sm font-semibold text-slate-500 dark:text-neutral-400">Preferred Currency:</label>
            <select 
               value={preferredCurrency} 
@@ -861,7 +888,11 @@ export default function Dashboard() {
               {history.map((h, i) => (
                 <tr key={i} className="border-b border-slate-100 dark:border-[#1a1a1a] hover:bg-slate-50 dark:hover:bg-[#111] transition-colors">
                   <td className="px-6 py-4 font-mono">{new Date(h.date).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 font-semibold text-slate-800 dark:text-white">{h.filename}</td>
+                  <td className="px-6 py-4 font-semibold text-slate-800 dark:text-white">
+                    <button onClick={() => handleLoadHistory(h)} className="hover:underline hover:text-orange-500 transition-colors text-left font-bold">
+                      {h.filename}
+                    </button>
+                  </td>
                   <td className="px-6 py-4">{h.transactions} txns</td>
                   <td className="px-6 py-4">
                     <span className="bg-orange-100 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 px-2 py-1 rounded text-xs font-bold">
