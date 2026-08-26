@@ -199,6 +199,30 @@ export default function Dashboard() {
     }
   };
 
+  const handleAddToLedger = () => {
+    if (!analysisResult || !scanResult) {
+       alert("Please upload a CSV statement first to initialize your ledger.");
+       return;
+    }
+    const newTx = {
+      date: scanResult.date,
+      description: scanResult.merchant,
+      amount: -parseFloat(scanResult.amount),
+      category: "Receipt",
+      is_impulse: false,
+      is_surge: false
+    };
+    const newResult = {
+      ...analysisResult,
+      categorized: [newTx, ...analysisResult.categorized]
+    };
+    setAnalysisResult(newResult);
+    localStorage.setItem('moneyda_cache', JSON.stringify(newResult));
+    setScanResult(null);
+    setReceiptImage(null);
+    setCurrentView('transactions');
+  };
+
   // Profile Stats
   const getProfileStats = () => {
     if (!analysisResult) return { totalSpend: 0, topCategory: "N/A", avgTx: 0 };
@@ -718,7 +742,7 @@ export default function Dashboard() {
               <p className="text-slate-600 dark:text-neutral-300 text-sm mb-1"><strong>Merchant:</strong> {scanResult.merchant}</p>
               <p className="text-slate-600 dark:text-neutral-300 text-sm mb-1"><strong>Amount:</strong> {currencySymbol}{scanResult.amount}</p>
               <p className="text-slate-600 dark:text-neutral-300 text-sm mb-3"><strong>Date:</strong> {scanResult.date}</p>
-              <button className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors">
+              <button onClick={handleAddToLedger} className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors">
                 Add to Ledger
               </button>
             </div>
