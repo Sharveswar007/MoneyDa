@@ -316,7 +316,46 @@ export default function Dashboard() {
         body: JSON.stringify({ message: userMsg, spending_data: analysisResult.categorized })
       });
       const data = await res.json();
-      setChatHistory(prev => [...prev, {role: 'ai', content: data.reply}]);
+      
+      let aiContent = data.reply || "I didn't understand that.";
+      const linkMatch = aiContent.match(/\[GENERATE_LINK:([\d.]+):(.*?)\]/);
+      
+      if (linkMatch) {
+         const amount = linkMatch[1];
+         const description = linkMatch[2];
+         aiContent = aiContent.replace(linkMatch[0], "\n\n*Generating Razorpay Payment Link...*");
+         setChatHistory(prev => [...prev, {role: 'ai', content: aiContent}]);
+         
+         try {
+            const rzpRes = await fetch("/api/razorpay_link", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({ amount, description })
+            });
+            const rzpData = await rzpRes.json();
+            if (rzpData.short_url) {
+                setChatHistory(prev => {
+                   const newHist = [...prev];
+                   newHist[newHist.length - 1].content = aiContent.replace("*Generating Razorpay Payment Link...*", `**[Pay ₹${amount} for ${description}](${rzpData.short_url})**`);
+                   return newHist;
+                });
+            } else {
+                setChatHistory(prev => {
+                   const newHist = [...prev];
+                   newHist[newHist.length - 1].content = aiContent.replace("*Generating Razorpay Payment Link...*", `*Failed to generate link: ${rzpData.error}*`);
+                   return newHist;
+                });
+            }
+         } catch (e) {
+             setChatHistory(prev => {
+                   const newHist = [...prev];
+                   newHist[newHist.length - 1].content = aiContent.replace("*Generating Razorpay Payment Link...*", `*Failed to generate link due to network error.*`);
+                   return newHist;
+             });
+         }
+      } else {
+         setChatHistory(prev => [...prev, {role: 'ai', content: aiContent}]);
+      }
     } catch {
       setChatHistory(prev => [...prev, {role: 'ai', content: "Error connecting to AI."}]);
     } finally {
