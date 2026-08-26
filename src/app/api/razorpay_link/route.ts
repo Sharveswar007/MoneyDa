@@ -29,7 +29,7 @@ export async function POST(req: Request) {
         description: description || "MoneyDa AI Generated Link",
         customer: {
           name: "MoneyDa Split Buddy",
-          contact: "+919999999999",
+          contact: "+919876543210",
           email: "buddy@example.com"
         },
         notify: {
