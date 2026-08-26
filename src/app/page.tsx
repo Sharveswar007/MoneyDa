@@ -1026,13 +1026,17 @@ export default function Dashboard() {
      
      let totalIncome = 0;
      let totalExpense = 0;
+     const uniqueMonths = new Set();
      (analysisResult.categorized || []).forEach((tx: any) => {
          const amt = typeof tx.amount === 'number' ? tx.amount : parseFloat(tx.amount || 0);
          if (amt > 0) totalIncome += amt;
          else totalExpense += Math.abs(amt);
+         if (tx.date) uniqueMonths.add(tx.date.substring(0, 7));
      });
      
-     const monthlySavings = totalIncome - totalExpense;
+     const monthCount = Math.max(1, uniqueMonths.size);
+     const monthlySavings = (totalIncome - totalExpense) / monthCount;
+     const rzpInvestAmount = Math.min(Math.floor(monthlySavings), 490000); // Max safe Razorpay link amount
      
      const r = 0.12;
      const n = 12;
@@ -1049,7 +1053,7 @@ export default function Dashboard() {
             const rzpRes = await fetch("/api/razorpay_link", {
                method: "POST",
                headers: { "Content-Type": "application/json" },
-               body: JSON.stringify({ amount: Math.floor(monthlySavings).toString(), description: "MoneyDa Auto-Invest Setup (eMandate Simulator)" })
+               body: JSON.stringify({ amount: rzpInvestAmount.toString(), description: "MoneyDa Auto-Invest Setup" })
             });
             const rzpData = await rzpRes.json();
             if (rzpData.short_url) {
