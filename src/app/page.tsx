@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-import { UploadCloud, CheckCircle2, Activity, Eye, Loader2, Sparkles, AlertTriangle, MoreVertical, Camera, EyeOff, Flame, Download, Calculator, X, ChevronDown, ChevronUp, Sun, Moon, ArrowUpDown, LayoutDashboard, Search, List, MessageSquare, User, Send, Check } from 'lucide-react';
+import { UploadCloud, CheckCircle2, Activity, Eye, Loader2, Sparkles, AlertTriangle, MoreVertical, Camera, EyeOff, Flame, Download, Calculator, X, ChevronDown, ChevronUp, Sun, Moon, ArrowUpDown, LayoutDashboard, Search, List, MessageSquare, User, Send, Check, ShieldAlert, TrendingUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 const categoryColors: Record<string, string> = {
@@ -21,7 +21,7 @@ export default function Dashboard() {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   
   // Router & UI State
-  const [currentView, setCurrentView] = useState<'home'|'transactions'|'chat'|'receipt'|'history'|'profile'>('home');
+  const [currentView, setCurrentView] = useState<'home'|'transactions'|'chat'|'receipt'|'history'|'profile'|'fraud'|'simulator'>('home');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [stealthMode, setStealthMode] = useState(false);
   const [activeModal, setActiveModal] = useState<{title: string, message: string} | null>(null);
@@ -49,6 +49,7 @@ export default function Dashboard() {
   const currencySymbol = preferredCurrency === 'INR' ? '₹' : preferredCurrency === 'USD' ? '$' : preferredCurrency === 'EUR' ? '€' : '£';
   
   const [history, setHistory] = useState<any[]>([]);
+  const [simYears, setSimYears] = useState(10);
 
   // LocalStorage Persistence & Theme Application
   useEffect(() => {
@@ -489,6 +490,12 @@ export default function Dashboard() {
           </button>
           <button onClick={() => setCurrentView('receipt')} className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-sm transition-all ${currentView === 'receipt' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'text-slate-600 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-[#1a1a1a] hover:text-slate-900 dark:hover:text-white'}`}>
             <Camera size={16} /> Scanner
+          </button>
+          <button onClick={() => setCurrentView('fraud')} className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-sm transition-all ${currentView === 'fraud' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'text-slate-600 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-[#1a1a1a] hover:text-slate-900 dark:hover:text-white'}`}>
+            <ShieldAlert size={16} /> Detective
+          </button>
+          <button onClick={() => setCurrentView('simulator')} className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-sm transition-all ${currentView === 'simulator' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'text-slate-600 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-[#1a1a1a] hover:text-slate-900 dark:hover:text-white'}`}>
+            <TrendingUp size={16} /> Simulator
           </button>
           <button onClick={() => setCurrentView('history')} className={`flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-sm transition-all ${currentView === 'history' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'text-slate-600 dark:text-neutral-400 hover:bg-slate-100 dark:hover:bg-[#1a1a1a] hover:text-slate-900 dark:hover:text-white'}`}>
             <List size={16} /> History
@@ -947,6 +954,123 @@ export default function Dashboard() {
     </div>
   );
 
+  const renderFraudView = () => {
+    if (!analysisResult) return <div className="text-center py-20">Please upload a statement first.</div>;
+    const txs = analysisResult.categorized || [];
+    
+    const anomalies: any[] = [];
+    const seen = new Set();
+    txs.forEach((tx: any) => {
+        const amt = typeof tx.amount === 'number' ? tx.amount : parseFloat(tx.amount || 0);
+        if (amt < 0) {
+            const key = `${tx.date}_${amt}`;
+            if (seen.has(key)) {
+                anomalies.push({ ...tx, type: 'Duplicate Charge', risk: 'High' });
+            } else {
+                seen.add(key);
+            }
+        }
+    });
+
+    txs.forEach((tx: any) => {
+        const amt = typeof tx.amount === 'number' ? tx.amount : parseFloat(tx.amount || 0);
+        if (amt < -1000 && tx.category?.toLowerCase() === 'subscriptions') {
+            anomalies.push({ ...tx, type: 'Expensive Subscription', risk: 'Medium' });
+        }
+    });
+
+    const handleDispute = (tx: any) => {
+        const email = `Subject: Dispute of Unauthorized/Duplicate Charge\n\nTo Customer Support,\n\nI am writing to formally dispute a recent charge made on my account on ${tx.date} for the amount of ${currencySymbol}${Math.abs(tx.amount).toFixed(2)} under the merchant name "${tx.description}".\n\nPlease investigate this transaction immediately and process a refund to my original payment method.\n\nSincerely,\n${userName}`;
+        setActiveModal({title: "Draft Dispute Email", message: email});
+    };
+
+    return (
+      <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><ShieldAlert className="text-red-500" /> Fraud & Anomaly Detective</h2>
+        {anomalies.length === 0 ? (
+          <div className="text-center text-slate-500 py-20 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-[#222] rounded-xl shadow-sm dark:shadow-none">No anomalies detected. Your account is secure.</div>
+        ) : (
+          <div className="grid gap-4">
+             {anomalies.map((a, i) => (
+                <div key={i} className="bg-white dark:bg-[#0a0a0a] p-4 rounded-xl border border-red-200 dark:border-red-900/30 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm dark:shadow-none">
+                   <div>
+                     <span className={`px-2 py-1 text-[10px] uppercase font-bold rounded ${a.risk === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400'} mb-2 inline-block`}>{a.type}</span>
+                     <h4 className="font-bold text-slate-800 dark:text-white">{a.description}</h4>
+                     <p className="text-sm text-slate-500 dark:text-neutral-400">{a.date} • {currencySymbol}{Math.abs(a.amount).toFixed(2)}</p>
+                   </div>
+                   <button onClick={() => handleDispute(a)} className="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-black font-bold rounded-lg text-sm transition-colors whitespace-nowrap">
+                     Draft Dispute
+                   </button>
+                </div>
+             ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderSimulatorView = () => {
+     if (!analysisResult) return <div className="text-center py-20">Please upload a statement first.</div>;
+     
+     let totalIncome = 0;
+     let totalExpense = 0;
+     (analysisResult.categorized || []).forEach((tx: any) => {
+         const amt = typeof tx.amount === 'number' ? tx.amount : parseFloat(tx.amount || 0);
+         if (amt > 0) totalIncome += amt;
+         else totalExpense += Math.abs(amt);
+     });
+     
+     const monthlySavings = totalIncome - totalExpense;
+     
+     const r = 0.12;
+     const n = 12;
+     const t = simYears;
+     const pmt = monthlySavings > 0 ? monthlySavings : 0;
+     
+     const futureWealth = pmt * ((Math.pow(1 + r/n, n*t) - 1) / (r/n));
+     const uninvestedWealth = pmt * 12 * t;
+
+     return (
+       <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+         <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><TrendingUp className="text-emerald-500" /> Time-Travel Wealth Simulator</h2>
+         
+         <div className="bg-white dark:bg-[#0a0a0a] p-6 rounded-xl border border-slate-200 dark:border-[#222] mb-6 shadow-sm dark:shadow-none">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Travel into the Future</h3>
+            <input 
+               type="range" min="1" max="30" value={simYears} 
+               onChange={e => setSimYears(parseInt(e.target.value))} 
+               className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer dark:bg-[#333] accent-orange-500"
+            />
+            <div className="flex justify-between text-sm text-slate-500 dark:text-neutral-400 mt-2 font-bold">
+               <span>1 Year</span>
+               <span className="text-orange-500 text-lg">{simYears} Years</span>
+               <span>30 Years</span>
+            </div>
+         </div>
+
+         {monthlySavings <= 0 ? (
+            <div className="bg-red-50 dark:bg-red-500/10 p-6 rounded-xl border border-red-200 dark:border-red-900/30 text-center">
+               <h3 className="text-xl font-bold text-red-600 dark:text-red-400 mb-2">Negative Cash Flow Alert</h3>
+               <p className="text-slate-600 dark:text-red-200/70">Your expenses exceed your income by {currencySymbol}{Math.abs(monthlySavings).toFixed(2)}/month. You are burning cash and cannot build wealth until this is reversed.</p>
+            </div>
+         ) : (
+            <div className="grid md:grid-cols-2 gap-6">
+               <div className="bg-white dark:bg-[#0a0a0a] p-6 rounded-xl border border-slate-200 dark:border-[#222] shadow-sm dark:shadow-none">
+                  <h3 className="text-sm font-bold text-slate-400 dark:text-neutral-500 uppercase tracking-widest mb-2">Status Quo (No Investing)</h3>
+                  <p className="text-3xl font-black text-slate-800 dark:text-white">{currencySymbol}{uninvestedWealth.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                  <p className="text-sm text-slate-500 mt-2">Just saving {currencySymbol}{monthlySavings.toLocaleString(undefined, {maximumFractionDigits:0})} every month in a bank account.</p>
+               </div>
+               <div className="bg-emerald-50 dark:bg-emerald-500/10 p-6 rounded-xl border border-emerald-200 dark:border-emerald-900/30 shadow-sm dark:shadow-none">
+                  <h3 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-2">Optimized Path (Invested @ 12%)</h3>
+                  <p className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{currencySymbol}{futureWealth.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                  <p className="text-sm text-emerald-700 dark:text-emerald-200 mt-2">By investing {currencySymbol}{monthlySavings.toLocaleString(undefined, {maximumFractionDigits:0})} monthly in an Index Fund.</p>
+               </div>
+            </div>
+         )}
+       </div>
+     );
+  };
+
   return (
     <div className={`${theme} transition-colors duration-300`}>
       <div className="min-h-screen bg-[#f8fafc] dark:bg-black text-slate-800 dark:text-white font-sans selection:bg-orange-500/30 transition-colors duration-300">
@@ -976,6 +1100,8 @@ export default function Dashboard() {
           {currentView === 'transactions' && renderTransactionsView()}
           {currentView === 'chat' && renderChatView()}
           {currentView === 'receipt' && renderReceiptView()}
+          {currentView === 'fraud' && renderFraudView()}
+          {currentView === 'simulator' && renderSimulatorView()}
           {currentView === 'history' && renderHistoryView()}
           {currentView === 'profile' && renderProfileView()}
         </main>
