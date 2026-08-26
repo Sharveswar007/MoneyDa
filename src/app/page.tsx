@@ -50,6 +50,8 @@ export default function Dashboard() {
   
   const [history, setHistory] = useState<any[]>([]);
   const [simYears, setSimYears] = useState(10);
+  const [isGeneratingInvestLink, setIsGeneratingInvestLink] = useState(false);
+  const [investLinkResult, setInvestLinkResult] = useState<string | null>(null);
 
   // LocalStorage Persistence & Theme Application
   useEffect(() => {
@@ -1030,6 +1032,28 @@ export default function Dashboard() {
      const futureWealth = pmt * ((Math.pow(1 + r/n, n*t) - 1) / (r/n));
      const uninvestedWealth = pmt * 12 * t;
 
+     const handleInvestSetup = async () => {
+         setIsGeneratingInvestLink(true);
+         setInvestLinkResult(null);
+         try {
+            const rzpRes = await fetch("/api/razorpay_link", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({ amount: Math.floor(monthlySavings).toString(), description: "MoneyDa Auto-Invest Setup (eMandate Simulator)" })
+            });
+            const rzpData = await rzpRes.json();
+            if (rzpData.short_url) {
+                setInvestLinkResult(rzpData.short_url);
+            } else {
+                setInvestLinkResult("Error: " + rzpData.error);
+            }
+         } catch (e) {
+             setInvestLinkResult("Network Error");
+         } finally {
+             setIsGeneratingInvestLink(false);
+         }
+     };
+
      return (
        <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
          <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2"><TrendingUp className="text-emerald-500" /> Time-Travel Wealth Simulator</h2>
@@ -1054,18 +1078,40 @@ export default function Dashboard() {
                <p className="text-slate-600 dark:text-red-200/70">Your expenses exceed your income by {currencySymbol}{Math.abs(monthlySavings).toFixed(2)}/month. You are burning cash and cannot build wealth until this is reversed.</p>
             </div>
          ) : (
-            <div className="grid md:grid-cols-2 gap-6">
+            <>
+            <div className="grid md:grid-cols-2 gap-6 mb-6">
                <div className="bg-white dark:bg-[#0a0a0a] p-6 rounded-xl border border-slate-200 dark:border-[#222] shadow-sm dark:shadow-none">
                   <h3 className="text-sm font-bold text-slate-400 dark:text-neutral-500 uppercase tracking-widest mb-2">Status Quo (No Investing)</h3>
                   <p className="text-3xl font-black text-slate-800 dark:text-white">{currencySymbol}{uninvestedWealth.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
                   <p className="text-sm text-slate-500 mt-2">Just saving {currencySymbol}{monthlySavings.toLocaleString(undefined, {maximumFractionDigits:0})} every month in a bank account.</p>
                </div>
-               <div className="bg-emerald-50 dark:bg-emerald-500/10 p-6 rounded-xl border border-emerald-200 dark:border-emerald-900/30 shadow-sm dark:shadow-none">
-                  <h3 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-2">Optimized Path (Invested @ 12%)</h3>
-                  <p className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{currencySymbol}{futureWealth.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
-                  <p className="text-sm text-emerald-700 dark:text-emerald-200 mt-2">By investing {currencySymbol}{monthlySavings.toLocaleString(undefined, {maximumFractionDigits:0})} monthly in an Index Fund.</p>
+               <div className="bg-emerald-50 dark:bg-emerald-500/10 p-6 rounded-xl border border-emerald-200 dark:border-emerald-900/30 shadow-sm dark:shadow-none flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-2">Optimized Path (Invested @ 12%)</h3>
+                    <p className="text-4xl font-black text-emerald-600 dark:text-emerald-400">{currencySymbol}{futureWealth.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                    <p className="text-sm text-emerald-700 dark:text-emerald-200 mt-2">By investing {currencySymbol}{monthlySavings.toLocaleString(undefined, {maximumFractionDigits:0})} monthly in an Index Fund.</p>
+                  </div>
+                  <button 
+                    onClick={handleInvestSetup}
+                    disabled={isGeneratingInvestLink}
+                    className="mt-6 w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                     {isGeneratingInvestLink ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                     Setup Razorpay eMandate
+                  </button>
                </div>
             </div>
+            {investLinkResult && (
+               <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-900/30 p-4 rounded-xl text-center">
+                   <p className="font-bold text-emerald-800 dark:text-emerald-400">Your Razorpay Auto-Invest setup link is ready:</p>
+                   {investLinkResult.startsWith("http") ? (
+                      <a href={investLinkResult} target="_blank" className="text-emerald-600 dark:text-emerald-300 underline font-semibold break-all text-sm mt-2 inline-block">{investLinkResult}</a>
+                   ) : (
+                      <p className="text-red-500">{investLinkResult}</p>
+                   )}
+               </div>
+            )}
+            </>
          )}
        </div>
      );
