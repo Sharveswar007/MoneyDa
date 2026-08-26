@@ -21,7 +21,7 @@ export default function Dashboard() {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   
   // Router & UI State
-  const [currentView, setCurrentView] = useState<'home'|'transactions'|'chat'|'receipt'|'profile'>('home');
+  const [currentView, setCurrentView] = useState<'home'|'transactions'|'chat'|'receipt'|'history'|'profile'>('home');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [stealthMode, setStealthMode] = useState(false);
   const [activeModal, setActiveModal] = useState<{title: string, message: string} | null>(null);
