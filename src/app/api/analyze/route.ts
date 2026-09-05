@@ -19,8 +19,8 @@ export async function POST(req: Request) {
        const amtKey = keys.find(k => k.toLowerCase().includes('amount') || k.toLowerCase().includes('withdrawal')) || keys[2];
        
        let date = row[dateKey];
-       let desc = row[descKey] || '';
-       let amtStr = (row[amtKey] || '0').replace(/,/g, '');
+       let desc = String(row[descKey] || '');
+       let amtStr = String(row[amtKey] || '0').replace(/,/g, '');
        let amt = parseFloat(amtStr);
        
        if (isNaN(amt)) amt = 0;
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
        // Handle HDFC style where withdrawal is separate from deposit
        const depositKey = keys.find(k => k.toLowerCase().includes('deposit'));
        if (depositKey && amt === 0) {
-           let depStr = (row[depositKey] || '0').replace(/,/g, '');
+           let depStr = String(row[depositKey] || '0').replace(/,/g, '');
            let dep = parseFloat(depStr);
            if (!isNaN(dep) && dep > 0) amt = dep;
            else amt = -Math.abs(amt); // Force negative if it was a withdrawal
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     });
     
     const categorized = rawTx.map(tx => {
-      const desc = tx.description.toLowerCase();
+      const desc = String(tx.description || '').toLowerCase();
       let cat = 'Other';
       if (desc.includes('zomato') || desc.includes('swiggy') || desc.includes('kfc') || desc.includes('mcdonalds')) cat = 'Dining Out';
       else if (desc.includes('amazon') || desc.includes('flipkart') || desc.includes('myntra')) cat = 'Shopping';

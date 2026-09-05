@@ -112,6 +112,11 @@ export default function Dashboard() {
           body: formData,
         });
         const data = await response.json();
+        
+        if (!response.ok || data.error) {
+          throw new Error(data.error || "Failed to analyze file");
+        }
+
         setAnalysisResult(data);
         localStorage.setItem('moneyda_cache', JSON.stringify(data));
         
@@ -127,8 +132,8 @@ export default function Dashboard() {
         const updatedHistory = [newEntry, ...history];
         setHistory(updatedHistory);
         localStorage.setItem('moneyda_history', JSON.stringify(updatedHistory));
-      } catch (error) {
-        alert("Failed to analyze file. Ensure the backend is running.");
+      } catch (error: any) {
+        alert(error.message || "Failed to analyze file. Ensure the backend is running.");
       } finally {
         setLoading(false);
       }
@@ -551,7 +556,7 @@ export default function Dashboard() {
               </p>
               <label className="cursor-pointer bg-orange-500 hover:bg-orange-600 text-white dark:text-black px-8 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 shadow-sm">
                 Select CSV File
-                <input type="file" className="hidden" accept=".csv" onChange={handleFileUpload} />
+                <input type="file" className="hidden" onChange={handleFileUpload} />
               </label>
             </div>
           )}
